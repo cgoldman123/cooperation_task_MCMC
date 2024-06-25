@@ -9,11 +9,8 @@ model {
           }
 
           for (t in 1:num.trials.per.block) {
-
-            #all.actions[s, b, t] ~ ifelse(action.prob.sum[s,b,t] == 1, dcat(action.probs[s,b,t,]), dcat(equal.action.probs[])).
-            #action.prob.sum[s,b,t] <- action.probs[s,b,t,1] + action.probs[s,b,t,2] + action.probs[s,b,t,3]
-            #all.actions[s, b, t] ~ dcat(equal.action.probs[s,b,t,])
             all.actions[s, b, t] ~ dcat(action.probs[s,b,t,])
+            
             
             for (pol in 1:3) {
                action.probs[s,b,t,pol] <- ifelse((transformed.q[s,b,t,1] + transformed.q[s,b,t,2] + transformed.q[s,b,t,3]) <= 0, 1/3, exp(transformed.q[s,b,t,pol]) / (exp(transformed.q[s,b,t,1]) + exp(transformed.q[s,b,t,2]) + exp(transformed.q[s,b,t,3])))
@@ -40,7 +37,6 @@ model {
                 for (k in 1:3) {
                     a[s,b,t+1,k,pol] <- counts.remembered[s,b,t,k,pol] + count.to.add[s,b,t,k,pol]
                     count.to.add[s,b,t,k,pol] <- ifelse((k == all.observations[s,b,t]) && (pol == all.actions[s,b,t]),eta[s],0)
-                    # count.to.add[s,b,t,k,pol] <- ifelse(pol == all.actions[s,b,t], ifelse(k == all.observations[s,b,t],eta[s],0),0)
                     counts.remembered[s,b,t,k,pol] <- a[s,b,t,k,pol]*omega[s]
                 }
 
@@ -66,8 +62,6 @@ model {
         eta[s] ~ dunif(.2,.7)
     }
     
-    #equal.action.probs[2] <- 1/3
-    #equal.action.probs[3] <- 1/3
     
 }
            

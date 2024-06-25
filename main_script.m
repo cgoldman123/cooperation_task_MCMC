@@ -1,6 +1,7 @@
 % Main script for model fitting the cooperation task data 
 dbstop if error
 rng(23);
+clear all;
 if ispc
     root = 'L:';
     result_dir = [root '/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/coop_model_output/'];
@@ -32,7 +33,7 @@ NS = length(fit_list);
 
 % use first subjects' data to get forced choice rewards/actions
 num_forced_choices = 3;
-num_trials_per_block = 8;
+num_trials_per_block = 16;
 num_blocks = 30;
 
 
@@ -40,14 +41,14 @@ for sn = 1:NS
     subject_id = char(fit_list(sn));
     subject_data = merged_data(strcmp(cellfun(@char, merged_data.subject_id, 'UniformOutput', false), subject_id), :);
 
-    %observations = subject_data(:,{'o1', 'o2', 'o3','o4', 'o5', 'o6', 'o7', 'o8', 'o9', 'o10', 'o11', 'o12', 'o13', 'o14', 'o15', 'o16'});
-    observations = subject_data(:,{'o1', 'o2', 'o3','o4', 'o5', 'o6', 'o7', 'o8'});
+    observations = subject_data(:,{'o1', 'o2', 'o3','o4', 'o5', 'o6', 'o7', 'o8', 'o9', 'o10', 'o11', 'o12', 'o13', 'o14', 'o15', 'o16'});
+    %observations = subject_data(:,{'o1', 'o2', 'o3','o4', 'o5', 'o6', 'o7', 'o8'});
     observations = table2array(observations);
     all_observations(sn,1:size(observations,1),:) = observations;
 
 
-    %actions = subject_data(:,{'u1', 'u2', 'u3','u4', 'u5', 'u6', 'u7', 'u8', 'u9', 'u10', 'u11', 'u12', 'u13', 'u14', 'u15', 'u16'});
-    actions = subject_data(:,{'u1', 'u2', 'u3','u4', 'u5', 'u6', 'u7', 'u8'});
+    actions = subject_data(:,{'u1', 'u2', 'u3','u4', 'u5', 'u6', 'u7', 'u8', 'u9', 'u10', 'u11', 'u12', 'u13', 'u14', 'u15', 'u16'});
+    %actions = subject_data(:,{'u1', 'u2', 'u3','u4', 'u5', 'u6', 'u7', 'u8'});
     actions = table2array(actions);
     all_actions(sn,1:size(actions,1),:) = actions;
 end
@@ -71,7 +72,7 @@ datastruct.all_observations = all_observations;
 
 nchains = 1;
 nburnin = 500;
-nsamples = 1; 
+nsamples = 100; 
 thin = 1;
 
 doparallel = 0;
@@ -79,7 +80,7 @@ doparallel = 0;
 clear S init0
 for i=1:nchains
 
-    S.p_a(1:NS) = 2.2;
+    S.pa(1:NS) = 2.2;
     S.eta(1:NS) = .4;
     S.cr(1:NS) = 4;
     S.cl(1:NS) = 2;
@@ -92,13 +93,13 @@ end
 tic
 
 
-monitor_params = {'p_a','eta','cr','cl','alpha','omega'};
+monitor_params = {'pa','eta','cr','cl','alpha','omega'};
 %monitor_params = {'alpha'};
 
 fprintf( 'Running JAGS\n' );
 [samples, stats ] = matjags( ...
     datastruct, ...
-    fullfile(currdir, 'coop_model_MCMC2'), ...
+    fullfile(currdir, 'coop_model_MCMC.txt'), ...
     init0, ...
     'doparallel' , doparallel, ...
     'nchains', nchains,...
@@ -112,36 +113,25 @@ fprintf( 'Running JAGS\n' );
     'cleanup' , 1  );
 toc
 
+% throw out first N-1 samples
+N = 1;
+stats.mean.pa = squeeze(mean(mean(samples.pa(:,N:end,:,:),2),1));
+stats.mean.eta = squeeze(mean(mean(samples.eta(:,N:end,:,:),2),1));
+stats.mean.cr = squeeze(mean(mean(samples.cr(:,N:end,:,:),2),1));
+stats.mean.cl = squeeze(mean(mean(samples.cl(:,N:end,:,:),2),1));
+stats.mean.omega = squeeze(mean(mean(samples.omega(:,N:end,:,:),2),1));
+stats.mean.alpha = squeeze(mean(mean(samples.alpha(:,N:end,:,:),2),1));
 
 
-for subject = fit_list
-    %Fit_file = strcat("./", fit_list(s), "-T1-_COP_R1-_BEH.csv");
-    subject
-    if experiment_mode == "local"
-        fit_results = TAB_fit_simple_local(subject);
-    elseif experiment_mode == "prolific"
-        fit_results = TAB_fit_simple_prolific(subject);
+fits = struct();
+    for si = 1:NS
+        fits(si).id = {char(fit_list(si));};
+        fits(si).pa = stats.mean.pa(si);  
+        fits(si).eta = stats.mean.eta(si);  
+        fits(si).cr = stats.mean.cr(si);  
+        fits(si).cl = stats.mean.cl(si);  
+        fits(si).omega = stats.mean.omega(si);  
+        fits(si).alpha = stats.mean.alpha(si);  
     end
-    save([result_dir '/' char(subject) '_fit_results.mat'], "fit_results");
     
-    % assemble output table
-    priorFields = fieldnames(fit_results.prior);
-    priorValues = struct2cell(fit_results.prior);
-    priorTable = cell2table(priorValues', 'VariableNames', strcat('prior_', priorFields));
-
-    postFields = fieldnames(fit_results.prior);
-    postValues = struct2cell(fit_results.parameters);
-    postTable = cell2table(postValues', 'VariableNames', strcat('posterior_', postFields));
-    % Extract additional values
-    additionalValuesTable = table({char(subject)}, fit_results.file, fit_results.average_action_probabilities, ...
-                                  fit_results.average_accuracy, (fit_results.has_practice_effects), ...
-                                  'VariableNames', {'subject', 'file', 'average_action_probabilities', ...
-                                                    'average_accuracy', 'has_practice_effects'});
-    % Concatenate all tables horizontally
-    resultTable = [additionalValuesTable, priorTable, postTable];
-    
-    writetable(resultTable, [result_dir '/coop_fit_' char(subject) '.csv']);
-
-    
-end
-
+fits = struct2table(fits);

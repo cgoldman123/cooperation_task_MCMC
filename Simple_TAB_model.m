@@ -7,7 +7,7 @@
 %
 % %Parameters
 % params.T = 16;
-% params.p_a = .25; %inverse information sensitivity (& lower bound on forgetting)
+% params.pa = .25; %inverse information sensitivity (& lower bound on forgetting)
 % params.cr = 2; %Reward Seeking
 % params.alpha = 32; %Action Precision
 % params.eta = .5; %Learning rate
@@ -45,9 +45,9 @@
 
 function [model_output] = Simple_TAB_model(params, rewards, choices, sim)
 
-a_0 = [params.p_a params.p_a params.p_a;
-       params.p_a params.p_a params.p_a;
-       params.p_a params.p_a params.p_a];
+a_0 = [params.pa params.pa params.pa;
+       params.pa params.pa params.pa;
+       params.pa params.pa params.pa];
 
 B_pi = [1 0 0;
         0 1 0;
@@ -73,7 +73,7 @@ for t = 1:params.T
         
         % only accumulate concentration parameters
         % forgetting part
-        a{t+1} = (a{t} - params.p_a)*(1-params.omega) + params.p_a;
+        a{t+1} = (a{t} - params.pa)*(1-params.omega) + params.pa;
         % learning part
         a{t+1} = a{t+1}+params.eta*(B_pi(:,actions(t))*outcome_vector(:,t)')';
        
@@ -141,7 +141,7 @@ for t = 1:params.T
             end
         else
             % forgetting part
-            a{t+1} = (a{t} - params.p_a)*(1-params.omega) + params.p_a;
+            a{t+1} = (a{t} - params.pa)*(1-params.omega) + params.pa;
             % learning part
             a{t+1} = a{t+1}+params.eta*(B_pi(:,actions(t))*outcome_vector(:,t)')';
         end

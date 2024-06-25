@@ -1,0 +1,61 @@
+#var a[NS,num.blocks,num.trials.per.block,3,3]
+
+model {
+      
+     for (s in 1:NS) {
+        pa[s] ~ dnorm(.25,4) I(.01,)
+        omega[s] ~ dnorm(.25,4) I(.01,.99)
+        eta[s] ~ dnorm(.5,4) I(.01,.99)
+        alpha[s] ~ dnorm(4,4) I(.01,)
+        cr[s] ~ dnorm(4,4) I(.01,)
+        cl[s] ~ dnorm(4,4) I(.01,)
+        C[s,1] <- cr[s]
+        C[s,2] <- 0
+        C[s,3] <- -cl[s]
+        softmaxed.C[s,1] = exp(C[s,1])/(exp(C[s,1]) + exp(C[s,2]) + exp(C[s,3]))
+        softmaxed.C[s,2] = exp(C[s,2])/(exp(C[s,1]) + exp(C[s,2]) + exp(C[s,3]))
+        softmaxed.C[s,3] = exp(C[s,3])/(exp(C[s,1]) + exp(C[s,2]) + exp(C[s,3]))
+
+        for (b in 1:num.blocks) {
+          for (pol in 1:3) {
+                for (k in 1:3) {
+                    a[s,b,1,k,pol] = pa[s]
+                }
+          }
+
+          for (t in 2:num.trials.per.block) {
+             for (pol in 1:3) {
+                for (k in 1:3) {
+                    count.to.add[s,b,t,k,pol] <- ifelse((k == all.observations[s,b,t-1]) && (pol == all.actions[s,b,t-1]),eta[s],0)
+                    counts.remembered[s,b,t,k,pol] <- (a[s,b,t-1,k,pol] - pa[s])*(1-omega[s]) + pa[s]
+                    a[s,b,t,k,pol] <- counts.remembered[s,b,t,k,pol] + count.to.add[s,b,t,k,pol]
+                }
+             }
+           }
+
+           for (t in 4:num.trials.per.block) {
+              for (pol in 1:3) {
+                   for (k in 1:3) {
+                       A[s,b,t,k,pol] <- a[s,b,t,k,pol]/(a[s,b,t,1,pol] + a[s,b,t,2,pol] + a[s,b,t,3,pol])
+                       a.sums[s,b,t,k,pol] = (a[s,b,t,1,pol] + a[s,b,t,2,pol] + a[s,b,t,3,pol])
+                       info.gain[s,b,t,k,pol] = .5*((a[s,b,t,k,pol]^-1)-(a.sums[s,b,t,k,pol]^-1))
+                   }
+                   epistemic.value[s,b,t,pol] <- sum(A[s,b,t,,pol] * info.gain[s,b,t,,pol])
+                   pragmatic.value[s,b,t,pol] <- sum(A[s,b,t,,pol] * log(softmaxed.C[s,]))
+                   G[s,b,t,pol] <- -epistemic.value[s,b,t,pol] - pragmatic.value[s,b,t,pol]
+              }
+              for (pol in 1:3){
+                   q[s,b,t,pol] <- (exp(-G[s,b,t,pol])) / (exp(-G[s,b,t,1]) + exp(-G[s,b,t,2]) + exp(-G[s,b,t,3]))
+                   transformed.q[s,b,t,pol] <- alpha[s] * log(q[s,b,t,pol])
+              }
+              for (pol in 1:3) {
+                   action.probs[s,b,t,pol] <- ifelse((transformed.q[s,b,t,1] + transformed.q[s,b,t,2] + transformed.q[s,b,t,3]) == 0, 1/3, exp(transformed.q[s,b,t,pol]) / (exp(transformed.q[s,b,t,1]) + exp(transformed.q[s,b,t,2]) + exp(transformed.q[s,b,t,3])))
+              }
+              all.actions[s, b, t] ~ dcat(action.probs[s,b,t,])
+
+           }
+        }
+     }
+}
+    
+           

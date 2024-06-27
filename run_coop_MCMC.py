@@ -20,20 +20,27 @@ with open(subject_list_path) as infile:
         if 'id' not in line:
             subjects.append(line.strip())
 
-ssub_path = '/media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/cooperation_task_scripts_CMG/run_coop.ssub'
-
+#subjects_string = ",".join(subjects)
 for subject in subjects:
+    #subjects = '65ea6d657bbd3689a87a1de6,565bff58c121fe0005fc390d,5590a34cfdf99b729d4f69dc'
+
+    ssub_path = '/media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/cooperation_task_scripts_MCMC_CMG/run_coop_MCMC.ssub'
+
+
     stdout_name = f"{results}/logs/{subject}-%J.stdout"
     stderr_name = f"{results}/logs/{subject}-%J.stderr"
 
-    jobname = f'coop-fit-{subject}'
+    jobname = f'coop-fit-MCMC-{subject}'
     os.system(f"sbatch -J {jobname} -o {stdout_name} -e {stderr_name} {ssub_path} {subject} {results} {experiment_mode}")
 
     print(f"SUBMITTED JOB [{jobname}]")
     
+    
+    
 
 
-    ###python3 run_coop.py  /media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/coop_model_output/coop_fits_prolific_05-27 "prolific"
+
+###python3  /media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/cooperation_task_scripts_MCMC_CMG/run_coop_MCMC.py  /media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/coop_MCMC_model_output/coop_MCMC_fits_1/ "prolific"
 
 
-    ## joblist | grep coop | grep -Po 98.... | xargs scancel
+## joblist | grep coop | grep -Po 98.... | xargs scancel

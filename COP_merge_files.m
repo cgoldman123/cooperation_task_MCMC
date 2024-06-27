@@ -1,7 +1,14 @@
 function merged_file = COP_merge_files(fit_list)
+    
+    if ispc
+        root = 'L:/';
+    else
+        root = '/media/labs/';
+    end
+
     merged_file = [];
     for subject = fit_list
-        root = 'L:/';
+        
         file_path = [root 'NPC/DataSink/StimTool_Online/WB_Cooperation_Task/'];
 
         has_practice_effects = false;
@@ -14,7 +21,7 @@ function merged_file = COP_merge_files(fit_list)
         % Use the sorted indices to sort the structure array
         sortedDirectory = directory(sortedIndices);
 
-        index_array = find(arrayfun(@(n) contains(sortedDirectory(n).name, strcat('cooperation_task_',subject, '_T1_Pilot_R1_NEW')),1:numel(sortedDirectory)));
+        index_array = find(arrayfun(@(n) contains(sortedDirectory(n).name, strcat('cooperation_task_',subject)),1:numel(sortedDirectory)));
         if length(index_array) > 1
             disp("WARNING, MULTIPLE BEHAVIORAL FILES FOUND FOR THIS ID. USING THE FIRST FULL ONE")
         end

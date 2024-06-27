@@ -4,26 +4,27 @@ rng(23);
 clear all;
 if ispc
     root = 'L:';
-    result_dir = [root '/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/coop_model_output/'];
+    result_dir = [root '/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/coop_MCMC_model_output/'];
     
     experiment_mode = "prolific";
     if experiment_mode == "local"
         fit_list = ["BW521","BV696","BV360"];
     elseif experiment_mode == "prolific"
         fit_list = ["65ea6d657bbd3689a87a1de6","565bff58c121fe0005fc390d","5590a34cfdf99b729d4f69dc"];
+        fit_list = "5ee09c1a0c2ad1027f541f53";
     end
    
 elseif isunix
     root = '/media/labs';
-    fit_list = string(getenv('SUBJECT'));
+    fit_list = string(strsplit(getenv('FIT_LIST'), ','));
     result_dir = getenv('RESULTS');
     experiment_mode = string(getenv('EXPERIMENT'));
     (fit_list)
     (result_dir)
     (experiment_mode)
 end
-currdir = pwd;
-addpath(['L:/rsmith/all-studies/core/matjags']);
+
+addpath([root '/rsmith/all-studies/core/matjags']);
 addpath([root '/rsmith/all-studies/util/spm12/']);
 addpath([root '/rsmith/all-studies/util/spm12/toolbox/DEM/']);
 
@@ -57,7 +58,8 @@ all_observations = all_observations - 1;
 
 datastruct = struct();
 datastruct.NS = NS;
-datastruct.num_forced_choices = num_forced_choices;
+datastruct.result_dir = result_dir;
+datastruct.subject = char(fit_list(1));
 datastruct.num_trials_per_block = num_trials_per_block;
 datastruct.num_blocks = num_blocks;
 datastruct.all_actions = all_actions;
@@ -68,9 +70,14 @@ datastruct.all_observations = all_observations;
 
 
 
-nchains = 1;
-nburnin = 10;
-nsamples = 10; 
+% nchains = 4;
+% nburnin = 500;
+% nsamples = 1000; 
+% thin = 1;
+
+nchains = 4;
+nburnin = 500;
+nsamples = 1000; 
 thin = 1;
 
 doparallel = 0;
@@ -78,24 +85,24 @@ doparallel = 0;
 clear S init0
 for i=1:nchains
 
-    S.pa(1:NS) = 2.2;
-    S.eta(1:NS) = .4;
+    S.pa(1:NS) = .25;
+    S.eta(1:NS) = .5;
     S.cr(1:NS) = 4;
-    S.cl(1:NS) = 2;
-    S.alpha(1:NS) = 2;
-    S.omega(1:NS) = .3;
+    S.cl(1:NS) = 4;
+    S.alpha(1:NS) = 4;
+    S.omega(1:NS) = .25;
     
     init0(i) = S;
 end
+currdir = pwd;
 
 tic
 
 
 monitor_params = {'pa','eta','cr','cl','alpha','omega'};
-%monitor_params = {'alpha'};
 
 fprintf( 'Running JAGS\n' );
-[samples, stats ] = matjags( ...
+[samples, stats ] = matjags_cmg( ...
     datastruct, ...
     fullfile(currdir, 'coop_model_MCMC.txt'), ...
     init0, ...
@@ -159,7 +166,16 @@ for si = 1:NS
     fits(si).average_action_probabilities = sum(avg_act_prob)/params.NB;
     fits(si).average_accuracy = (sum(sum(acc,2))/(params.NB*params.T));
 end
-    
- 
-    
-fits = struct2table(fits);
+if NS == 1
+    writetable(struct2table(fits), [result_dir char(fit_list(1)) '_cooperation_task_MCMC_fit.csv']);
+    save(fullfile([result_dir char(fit_list(1)) '_cooperation_task_MCMC_samples.mat']), 'samples');
+    save(fullfile([result_dir char(fit_list(1)) '_cooperation_task_MCMC_stats.mat']), 'stats'); 
+else
+    writetable(struct2table(fits), [result_dir 'cooperation_task_MCMC_fits.csv']);
+    save(fullfile([result_dir 'cooperation_task_MCMC_samples.mat']), 'samples');
+    save(fullfile([result_dir 'cooperation_task_MCMC_stats.mat']), 'stats');
+end
+
+
+
+

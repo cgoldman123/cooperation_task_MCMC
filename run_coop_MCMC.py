@@ -24,7 +24,7 @@ with open(subject_list_path) as infile:
 for subject in subjects:
     #subjects = '65ea6d657bbd3689a87a1de6,565bff58c121fe0005fc390d,5590a34cfdf99b729d4f69dc'
 
-    ssub_path = '/media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/cooperation_task_scripts_MCMC_CMG/run_coop_MCMC.ssub'
+    ssub_path = '/media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/scripts/cooperation_task_scripts_MCMC_CMG/run_coop_MCMC.ssub'
 
 
     stdout_name = f"{results}/logs/{subject}-%J.stdout"
@@ -40,7 +40,7 @@ for subject in subjects:
 
 
 
-###python3  /media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/cooperation_task_scripts_MCMC_CMG/run_coop_MCMC.py  /media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/coop_MCMC_model_output/coop_MCMC_fits_1/ "prolific"
+###python3  /media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/scripts/cooperation_task_scripts_MCMC_CMG/run_coop_MCMC.py  /media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/modeling_output/coop_MCMC_model_output/coop_MCMC_fit_7_9_24/ "prolific"
 
 
 ## joblist | grep coop | grep -Po 98.... | xargs scancel

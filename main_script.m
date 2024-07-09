@@ -8,10 +8,10 @@ if ispc
     
     experiment_mode = "prolific";
     if experiment_mode == "local"
-        fit_list = ["BW521","BV696","BV360"];
+        fit_list = ["BW521"];
     elseif experiment_mode == "prolific"
         fit_list = ["65ea6d657bbd3689a87a1de6","565bff58c121fe0005fc390d","5590a34cfdf99b729d4f69dc"];
-        fit_list = "5ee09c1a0c2ad1027f541f53";
+        fit_list = "65ea6d657bbd3689a87a1de6";
     end
    
 elseif isunix
@@ -27,6 +27,8 @@ end
 addpath([root '/rsmith/all-studies/core/matjags']);
 addpath([root '/rsmith/all-studies/util/spm12/']);
 addpath([root '/rsmith/all-studies/util/spm12/toolbox/DEM/']);
+addpath([root '/rsmith/all-studies/util/matlab-bayesian-estimation-master/']);
+addpath([root '/rsmith/all-studies/util/matlab-bayesian-estimation-master/fileExchange/mcmcdiag']);
 
 merged_data = COP_merge_files(fit_list);
 
@@ -69,11 +71,6 @@ datastruct.all_observations = all_observations;
 
 
 
-
-% nchains = 4;
-% nburnin = 500;
-% nsamples = 1000; 
-% thin = 1;
 
 nchains = 4;
 nburnin = 500;
@@ -118,6 +115,7 @@ fprintf( 'Running JAGS\n' );
     'cleanup' , 1  );
 toc
 
+% MEAN
 % throw out first N-1 samples
 N = 1;
 stats.mean.pa = squeeze(mean(mean(samples.pa(:,N:end,:,:),2),1));
@@ -128,44 +126,61 @@ stats.mean.omega = squeeze(mean(mean(samples.omega(:,N:end,:,:),2),1));
 stats.mean.alpha = squeeze(mean(mean(samples.alpha(:,N:end,:,:),2),1));
 
  
+% MODE
+params = {'alpha', 'pa', 'eta', 'cr', 'cl', 'omega'};
+% Loop through each parameter, compute the mode after rounding, and store in stats
+for i = 1:length(params)
+    data_vector = round(samples.(params{i})(:), 2);
+    [unique_values, ~, idx] = unique(data_vector);
+    frequency = accumarray(idx, 1);
+    [~, max_idx] = max(frequency);
+    stats.mode.(params{i}) = unique_values(max_idx);
+end
 
 
 
-
-
-
-fits = struct();
-for si = 1:NS
+for si = 1:NS 
     fits(si).id = {char(fit_list(si))};
-    fits(si).pa = stats.mean.pa(si);  
-    fits(si).eta = stats.mean.eta(si);  
-    fits(si).cr = stats.mean.cr(si);  
-    fits(si).cl = stats.mean.cl(si);  
-    fits(si).omega = stats.mean.omega(si);  
-    fits(si).alpha = stats.mean.alpha(si);  
+    mean_or_mode = {'mean','mode'};
+    for i = 1:length(mean_or_mode)
+        for fn = fieldnames(stats.(mean_or_mode{i}))'
+            fits(si).([mean_or_mode{i} '_' (fn{1})]) = stats.(mean_or_mode{i}).(fn{1});
+        end
+        params = stats.(mean_or_mode{i}); 
+        params.forgetting_split = 0;
+        params.learning_split = 0;
+        params.NB = num_blocks;
+        params.T = num_trials_per_block;
 
-    params = fits(si);
-    params.forgetting_split = 0;
-    params.learning_split = 0;
-    params.NB = num_blocks;
-    params.T = num_trials_per_block;
-
-    for block=1:num_blocks
-        choices = squeeze(all_observations(si,block,:))';
-        rewards = squeeze(all_actions(si,block,:))';
-        MDP_Block{block} = Simple_TAB_model(params, rewards, choices, 0);
-        avg_act_prob(block) = sum(MDP_Block{block}.chosen_action_probabilities)/params.T;
-        for trial = 1:params.T
-            if MDP_Block{block}.chosen_action_probabilities(trial) == max(MDP_Block{block}.action_probabilities(:,trial))
-                acc(block,trial) = 1;
-            else
-                acc(block,trial) = 0;
+        for block=1:num_blocks
+            rewards = squeeze(all_observations(si,block,:))';
+            choices = squeeze(all_actions(si,block,:))';
+            MDP_Block{block} = Simple_TAB_model(params, rewards, choices, 0);
+            avg_act_prob(block) = sum(MDP_Block{block}.chosen_action_probabilities)/params.T;
+            for trial = 1:params.T
+                if MDP_Block{block}.chosen_action_probabilities(trial) == max(MDP_Block{block}.action_probabilities(:,trial))
+                    acc(block,trial) = 1;
+                else
+                    acc(block,trial) = 0;
+                end
             end
         end
+        fits(si).(['avg_act_prob_' mean_or_mode{i} '_params'])  = sum(avg_act_prob)/params.NB;
+        fits(si).(['model_acc_' mean_or_mode{i} '_params'])  = (sum(sum(acc,2))/(params.NB*params.T));
     end
-    fits(si).average_action_probabilities = sum(avg_act_prob)/params.NB;
-    fits(si).average_accuracy = (sum(sum(acc,2))/(params.NB*params.T));
 end
+
+% assess convergence
+% mbe_gelmanPlot(samples.pa')
+% mbe_gelmanPlot(samples.eta')
+% mbe_gelmanPlot(samples.cr')
+% mbe_gelmanPlot(samples.cl')
+% mbe_gelmanPlot(samples.omega')
+% mbe_gelmanPlot(samples.alpha')
+
+
+
+
 if NS == 1
     writetable(struct2table(fits), [result_dir char(fit_list(1)) '_cooperation_task_MCMC_fit.csv']);
     save(fullfile([result_dir char(fit_list(1)) '_cooperation_task_MCMC_samples.mat']), 'samples');

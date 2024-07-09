@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --mem=12000
 #SBATCH --nodes=1
-#SBATCH --chdir=/media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/cooperation_task_scripts_MCMC_CMG/
+#SBATCH --chdir=/media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/scripts/cooperation_task_scripts_MCMC_CMG/
 #SBATCH --begin=now
 #
 #################################################
@@ -22,5 +22,5 @@ export EXPERIMENT
 
 module load matlab/2022a
 module load JAGS/4.3.0-foss-2021a
-run_file='/media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/cooperation_task_scripts_MCMC_CMG/main_script.m'
+run_file='/media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/scripts/cooperation_task_scripts_MCMC_CMG/main_script.m'
 matlab -nodisplay -nosplash < ${run_file}

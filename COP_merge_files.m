@@ -31,9 +31,18 @@ function merged_file = COP_merge_files(fit_list)
             file = [file_path sortedDirectory(file_index).name];
 
             subdat = readtable(file);
-
-            % continue to next file if no MAIN_START
-            if ~any(cellfun(@(x) isequal(x, 'MAIN_START'), subdat.trial_type))
+            % if they got past "MAIN_START" but don't have the right number
+            % of trials, indicate that they have practice effects and advance 
+            % them to the next file
+            if any(cellfun(@(x) isequal(x, 'MAIN_START'), subdat.trial_type))
+                first_game_trial = min(find(ismember(subdat.trial_type, 'MAIN_START'))) +2;
+                clean_subdat = subdat(first_game_trial:end, :);
+                % make sure correct number of trials
+                if (length(clean_subdat.result(clean_subdat.event_type == 5)) ~= 480) || (length(clean_subdat.response(clean_subdat.event_type == 5)) ~= 480)
+                    has_practice_effects = true;
+                    continue;
+                end
+            else 
                 continue;
             end
 
@@ -46,8 +55,7 @@ function merged_file = COP_merge_files(fit_list)
             NB  = 30;     % number of blocks
             N   = TpB*NB; % trials per block * number of blocks
 
-            first_game_trial = min(find(ismember(subdat.trial_type, 'MAIN_START'))) +2;
-            clean_subdat = subdat(first_game_trial:end, :);
+
 
             trial_types = clean_subdat.trial_type(clean_subdat.event_type==3,:);
             location_code = zeros(NB, 3);
@@ -71,16 +79,7 @@ function merged_file = COP_merge_files(fit_list)
             % parse observations and actions
             sub.o = clean_subdat.result(clean_subdat.event_type == 5);
             sub.u = clean_subdat.response(clean_subdat.event_type == 5);
-            
-            % if they got past "MAIN_START" but don't have the right number
-            % of trials, indicate that they have practice effects and advance 
-            % them to the next file
-            if size(sub.o,1) ~= 480 && size(sub.u,1) ~= 480
-                has_practice_effects = true;
-                continue
-            end
-               
-            
+                 
 
             for i = 1:N
                 if sub.o{i,1} == "positive"
@@ -132,6 +131,7 @@ function merged_file = COP_merge_files(fit_list)
             % Create a table
             % Append the table to the merged_file table
             merged_file = [merged_file; T];
+            break;
 
         end
     end

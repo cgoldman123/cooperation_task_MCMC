@@ -40,7 +40,7 @@ for subject in subjects:
 
 
 
-###python3  /media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/scripts/cooperation_task_scripts_MCMC_CMG/run_coop_MCMC.py  /media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/modeling_output/coop_MCMC_model_output/coop_MCMC_fit_7_9_24/ "prolific"
+###python3  /media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/scripts/cooperation_task_scripts_MCMC_CMG/run_coop_MCMC.py  /media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/modeling_output/coop_MCMC_model_output/coop_MCMC_simfit_7_19_24/ "prolific"
 
 
 ## joblist | grep coop | grep -Po 98.... | xargs scancel

@@ -3,7 +3,7 @@ dbstop if error
 rng(23);
 clear all;
 SIMFIT = true;
-SIM_PARAMS_PASSED_IN = true;
+SIM_PARAMS_PASSED_IN = false;
 
 if ispc
     root = 'L:';
@@ -14,7 +14,7 @@ if ispc
         fit_list = ["BW521"];
     elseif experiment_mode == "prolific"
         fit_list = ["65ea6d657bbd3689a87a1de6","565bff58c121fe0005fc390d","5590a34cfdf99b729d4f69dc"];
-        fit_list = "65ea6d657bbd3689a87a1de6";
+        fit_list = "5590a34cfdf99b729d4f69dc";
     end
     
     simfit_alpha = 3.1454473;
@@ -26,21 +26,24 @@ if ispc
    
 elseif isunix
     root = '/media/labs';
-    fit_list = string(strsplit(getenv('FIT_LIST'), ','))
+    fit_list = string(strsplit(getenv('SUBJECT'), ','))
     result_dir = getenv('RESULTS')
     experiment_mode = string(getenv('EXPERIMENT'))
     
-    simfit_alpha = str2double(getenv('ALPHA'))
-    simfit_cr = str2double(getenv('CR'))
-    simfit_cl = str2double(getenv('CL'))
-    simfit_eta = str2double(getenv('ETA'))
-    simfit_omega = str2double(getenv('OMEGA'))
-    simfit_pa = str2double(getenv('P_A'))
+    if SIM_PARAMS_PASSED_IN
+        simfit_alpha = str2double(getenv('ALPHA'))
+        simfit_cr = str2double(getenv('CR'))
+        simfit_cl = str2double(getenv('CL'))
+        simfit_eta = str2double(getenv('ETA'))
+        simfit_omega = str2double(getenv('OMEGA'))
+        simfit_pa = str2double(getenv('P_A'))
+    end
       
     
 end
 
-addpath([root '/rsmith/all-studies/core/matjags']);
+%addpath([root '/rsmith/all-studies/core/matjags']);
+addpath([root '/rsmith/lab-members/cgoldman/general/']);
 addpath([root '/rsmith/all-studies/util/spm12/']);
 addpath([root '/rsmith/all-studies/util/spm12/toolbox/DEM/']);
 addpath([root '/rsmith/all-studies/util/matlab-bayesian-estimation-master/']);
@@ -52,7 +55,7 @@ NS = length(fit_list);
 % use first subjects' data to get forced choice rewards/actions
 conf.num_forced_choices = 3;
 conf.num_trials_per_block = 16;
-conf.num_blocks = 30;
+conf.num_blocks = 15;
 
 
 conf.nchains = 4;
@@ -61,7 +64,7 @@ conf.nsamples = 1000;
 %conf.nburnin = 10;
 %conf.nsamples = 20;
 conf.thin = 1;
-conf.doparallel = 0;
+conf.doparallel = 1;
 conf.result_dir = result_dir;
 conf.fit_list = fit_list;
 
@@ -103,21 +106,22 @@ if NS == 1
                 sim_fit.(['simulated_' fields{i}]) = params.(fields{i});
             end
             fits = sim_fit; samples = sim_samples; stats = sim_stats;
+            fits.id = {subject_id};
         else
+            params = stats.mean;
             [sim_fit, sim_samples, sim_stats] = MCMC_simfit(subject_data, params,conf);
             fields = setdiff(fieldnames(sim_fit), {'id'});
             for i = 1:length(fields)
                 fits.(['simfit_' fields{i}]) = sim_fit.(fields{i});
             end
             fields = fieldnames(sim_samples);
-            for i = 1:length(samples)
+            for i = 1:length(fields)
                 samples.(['simfit_' fields{i}]) = sim_samples.(fields{i});
             end
             fields = fieldnames(sim_stats);
-            for i = 1:length(samples)
+            for i = 1:length(fields)
                 stats.(['simfit_' fields{i}]) = sim_stats.(fields{i});
             end
-            params = stats.mean;
         end
         
 
@@ -125,12 +129,12 @@ if NS == 1
     else
         fit_type = 'fit';
     end
-    writetable(struct2table(fits), [result_dir char(fit_list(1)) '_' fit_type '_coop_MCMC.csv'], 'WriteVariableNames', true);
+    writetable(struct2table(fits), [result_dir char(fit_list(1)) '_' fit_type '_coop_MCMC.csv']);
     save(fullfile([result_dir char(fit_list(1)) '_' fit_type '_coop_MCMC_samples.mat']), 'samples');
     save(fullfile([result_dir char(fit_list(1)) '_' fit_type '_coop_MCMC_stats.mat']), 'stats'); 
 
 else
-    writetable(struct2table(fits), [result_dir 'cooperation_task_MCMC_fits.csv'],'WriteVariableNames', true);
+    writetable(struct2table(fits), [result_dir 'cooperation_task_MCMC_fits.csv']);
     save(fullfile([result_dir 'cooperation_task_MCMC_samples.mat']), 'samples');
     save(fullfile([result_dir 'cooperation_task_MCMC_stats.mat']), 'stats');
 end

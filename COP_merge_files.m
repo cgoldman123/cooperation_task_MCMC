@@ -38,6 +38,8 @@ function merged_file = COP_merge_files(fit_list)
                 first_game_trial = min(find(ismember(subdat.trial_type, 'MAIN_START'))) +2;
                 clean_subdat = subdat(first_game_trial:end, :);
                 % make sure correct number of trials
+                % note that event_type ==5 should always be 480 but sometimes
+                % event_type ==4 will be 479
                 if (length(clean_subdat.result(clean_subdat.event_type == 5)) ~= 480) || (length(clean_subdat.response(clean_subdat.event_type == 5)) ~= 480)
                     has_practice_effects = true;
                     continue;

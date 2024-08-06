@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+#SBATCH --partition=c3
+#SBATCH --ntasks=1
+#SBATCH --mem=12000
+#SBATCH --nodes=1
+#SBATCH --chdir=/media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/scripts/cooperation_task_scripts_MCMC_CMG/
+#SBATCH --begin=now
+#
+#################################################
+
+RESULTS=$1
+export RESULTS
+
+EXPERIMENT=$2
+export EXPERIMENT
+
+SUBJECT=$3
+export SUBJECT
+
+ALPHA=$4
+export ALPHA
+
+ETA=$5
+export ETA
+
+OMEGA=$6
+export OMEGA
+
+P_A=$7
+export P_A
+
+CR=$8
+export CR
+
+CL=$9
+export CL
+
+
+module load JAGS/4.3.0-foss-2021a
+module load matlab/2022a
+
+run_file='/media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/scripts/cooperation_task_scripts_MCMC_CMG/main_script.m'
+matlab -nodisplay -nosplash < ${run_file}

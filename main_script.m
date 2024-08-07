@@ -60,7 +60,8 @@ conf.num_blocks = 15;
 
 conf.nchains = 4;
 conf.nburnin = 500;
-conf.nsamples = 1000; 
+conf.nsamples = 2000; 
+conf.N = 501; % 1 - throwaway
 %conf.nburnin = 10;
 %conf.nsamples = 20;
 conf.thin = 1;
@@ -70,18 +71,23 @@ conf.fit_list = fit_list;
 
 
 
-% assess convergence
-% mbe_gelmanPlot(samples.pa')
-% mbe_gelmanPlot(samples.eta')
-% mbe_gelmanPlot(samples.cr')
-% mbe_gelmanPlot(samples.cl')
-% mbe_gelmanPlot(samples.omega')
-% mbe_gelmanPlot(samples.alpha')
+
 merged_data = COP_merge_files(fit_list);
 
 % even if passing in params to simfit, we must fit this subject to set up
 % the mdp
 [fits, samples, stats] = MCMC_fit(fit_list,merged_data, conf);
+fields = setdiff(fieldnames(samples), {'deviance'});
+
+% assess convergence in samples that were accepted (removing discarded
+% samples based on conf.N)
+discard_ratio = conf.N/conf.nsamples;
+for i=1:length(fields)
+    param = fields{i};
+    R = mbe_gelmanPlot(samples.(param)');
+    R = R(ceil(length(R)*discard_ratio):end);
+    fits.([fields{i} '_max_rubin_stat']) = max(R);
+end
 
 
 if NS == 1
@@ -101,7 +107,6 @@ if NS == 1
             
             % if passing in params, we don't care about the previously fit
             % params to set up the mdp
-            fields = setdiff(fieldnames(params), {'deviance'});
             for i = 1:length(fields)
                 sim_fit.(['simulated_' fields{i}]) = params.(fields{i});
             end

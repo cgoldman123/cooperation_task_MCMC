@@ -78,11 +78,13 @@ function [fits, samples, stats] = MCMC_fit(fit_list,merged_data, conf)
 
     % MEAN
     % throw out first N-1 samples
-    N = 1;
+    N = conf.N;
     for i=1:length(monitor_params)
         stats.mean.(monitor_params{i}) = squeeze(mean(mean(samples.(monitor_params{i})(:,N:end,:,:),2),1));
     end
 
+    
+    
 
     % MODE
     % Loop through each parameter, compute the mode after rounding, and store in stats

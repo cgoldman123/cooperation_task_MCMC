@@ -102,7 +102,7 @@ function [sim_fits, sim_samples, sim_stats] = MCMC_simfit(subject_data, params,c
     
      % MEAN
     % throw out first N-1 samples
-    N = 1;
+    N = conf.N;
     for i=1:length(monitor_params)
         sim_stats.mean.(monitor_params{i}) = squeeze(mean(mean(sim_samples.(monitor_params{i})(:,N:end,:,:),2),1));
     end

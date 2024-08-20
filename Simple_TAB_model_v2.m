@@ -57,7 +57,9 @@ B_pi = [1 0 0;
 C =  spm_softmax([params.cr+params.cl+eps params.cl+eps eps]');
 
 outcome_vector = zeros(3,params.T);
-
+F = nan(3,params.T);
+G_error = nan(1,params.T);
+chosen_action_probs = nan(1,params.T);
 
 for t = 1:params.T
     if t <= 3
@@ -72,10 +74,40 @@ for t = 1:params.T
         outcomes(t) = rewards(t);    
         outcome_vector(outcomes(t),t) = 1; 
         % only accumulate concentration parameters
-        % forgetting part
-        a{t+1} = (a{t} - a_0)*params.omega + a_0;
         % learning part
-        a{t+1} = a{t+1}+params.eta*(B_pi(:,actions(t))*outcome_vector(:,t)')';
+        if params.learning_split
+            if outcomes(t) == 1
+                eta = params.eta_win;
+            elseif outcomes(t) == 2
+                eta = params.eta_neutral;
+            elseif outcomes(t) == 3
+                eta = params.eta_loss;
+            end
+        else
+        eta = params.eta;
+        end
+
+        %forgetting part
+        if params.forgetting_split_matrix
+            if outcomes(t) == 1
+                omega = params.omega_win;
+            elseif outcomes(t) == 2
+                omega = params.omega_neutral;
+            elseif outcomes(t) == 3
+                omega = params.omega_loss;
+            end
+            a{t+1} = (a{t} - a_0)*(1-omega)+ a_0;
+
+        elseif params.forgetting_split_row
+            omega = [1-params.omega_win; 1-params.omega_neutral; 1-params.omega_loss];
+            a{t+1} = (a{t} - a_0).* repmat(omega, 1, 3)+ a_0;
+        else
+            omega = params.omega;
+            a{t+1} = (a{t} - a_0)*(1-omega)+ a_0;
+        end 
+        
+        a{t+1} = a{t+1}+eta*(B_pi(:,actions(t))*outcome_vector(:,t)')';
+        %learning_rate
        
     elseif t > 3
         
@@ -98,8 +130,9 @@ for t = 1:params.T
         end
         
         % compute action probabilities
-        q(:,t) = spm_softmax(-G(:,t));
-        action_probs(:,t) = spm_softmax(params.alpha*log(q(:,t)))';
+        action_probs(:,t) = spm_softmax(params.alpha*-G(:,t));
+        
+        
         
         % select actions
         if sim == 1 %.toggle == 1
@@ -120,31 +153,46 @@ for t = 1:params.T
             outcome_vector(rewards(t),t) = 1;
         end
         
+        % Get surprise
+        F(:, t) = -log(A{t}'*outcome_vector(:,t));
+        action_probs_post = spm_softmax(params.alpha*-G(:,t) - F(:,t));
+        G_error(t) = (action_probs_post - action_probs(:,t))'*G(:,t);
+        
         % learning
-        if params.forgetting_split==1 & params.learning_split==1
+        if params.learning_split
             if outcomes(t) == 1
-                a{t+1} = params.omega_win*a{t}+params.eta_win*(B_pi(:,actions(t))*outcome_vector(:,t)')';
+                eta = params.eta_win;
             elseif outcomes(t) == 2
-                a{t+1} = params.omega_loss*a{t}+params.eta_loss*(B_pi(:,actions(t))*outcome_vector(:,t)')';
-            end
-        elseif params.forgetting_split==1 & params.learning_split==0
-            if outcomes(t) == 1
-                a{t+1} = params.omega_win*a{t}+params.eta*(B_pi(:,actions(t))*outcome_vector(:,t)')';
-            elseif outcomes(t) == 2
-                a{t+1} = params.omega_loss*a{t}+params.eta*(B_pi(:,actions(t))*outcome_vector(:,t)')';
-            end
-        elseif params.forgetting_split==0 & params.learning_split==1
-            if outcomes(t) == 1
-                a{t+1} = params.omega*a{t}+params.eta_win*(B_pi(:,actions(t))*outcome_vector(:,t)')';
-            elseif outcomes(t) == 2
-                a{t+1} = params.omega*a{t}+params.eta_loss*(B_pi(:,actions(t))*outcome_vector(:,t)')';
+                eta = params.eta_neutral;
+            elseif outcomes(t) == 3
+                eta = params.eta_loss;
             end
         else
-            % forgetting part
-            a{t+1} = (a{t} - a_0)*(1-params.omega) + a_0;
-            % learning part
-            a{t+1} = a{t+1}+params.eta*(B_pi(:,actions(t))*outcome_vector(:,t)')';
+            eta = params.eta;
         end
+
+        % forgetting part
+        if params.forgetting_split_matrix
+            if outcomes(t) == 1
+                omega = params.omega_win;
+            elseif outcomes(t) == 2
+                omega = params.omega_neutral;
+            elseif outcomes(t) == 3
+                omega = params.omega_loss;
+            end
+            a{t+1} = (a{t} - a_0)*(1-omega)+ a_0;
+
+        elseif params.forgetting_split_row
+            omega = [1-params.omega_win; 1-params.omega_neutral; 1-params.omega_loss];
+            a{t+1} = (a{t} - a_0).* repmat(omega, 1, 3)+ a_0;
+        else
+            omega = params.omega;
+            a{t+1} = (a{t} - a_0)*(1-omega)+ a_0;
+        end 
+        
+      % learning part
+        a{t+1} = a{t+1}+ eta*(B_pi(:,actions(t))*outcome_vector(:,t)')';
+        
     end
     
 end
@@ -160,8 +208,7 @@ model_output.params = params;
 model_output.EFE = G;
 model_output.epistemic_value = epistemic_value;
 model_output.pragmatic_value = pragmatic_value;
-
-
+model_output.G_error = G_error;
 
 end
 

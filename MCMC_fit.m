@@ -51,7 +51,7 @@ function [fits, samples, stats] = MCMC_fit(fit_list,merged_data, conf)
         S.cr(1:NS) = 1;
         S.cl(1:NS) = 1;
         S.alpha(1:NS) = 4;
-        S.omega(1:NS) = .5;
+        S.omega(1:NS) = .2;
 
         init0(i) = S;
     end
@@ -108,7 +108,8 @@ function [fits, samples, stats] = MCMC_fit(fit_list,merged_data, conf)
                 fits(si).([mean_or_mode{i} '_' (fn{1})]) = stats.(mean_or_mode{i}).(fn{1});
             end
             params = stats.(mean_or_mode{i}); 
-            params.forgetting_split = 0;
+            params.forgetting_split_matrix = 0;
+            params.forgetting_split_row = 0;
             params.learning_split = 0;
             params.NB = num_blocks;
             params.T = num_trials_per_block;

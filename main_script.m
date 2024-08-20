@@ -14,7 +14,7 @@ if ispc
         fit_list = ["BW521"];
     elseif experiment_mode == "prolific"
         fit_list = ["65ea6d657bbd3689a87a1de6","565bff58c121fe0005fc390d","5590a34cfdf99b729d4f69dc"];
-        fit_list = "5590a34cfdf99b729d4f69dc";
+        fit_list = "5590a34cfdf99b729d4f69dc"; % 6629bd52f563a590601a612e 5590a34cfdf99b729d4f69dc
     end
     
     simfit_alpha = 3.1454473;
@@ -55,15 +55,16 @@ NS = length(fit_list);
 % use first subjects' data to get forced choice rewards/actions
 conf.num_forced_choices = 3;
 conf.num_trials_per_block = 16;
-conf.num_blocks = 15;
+conf.num_blocks = 30;
 
 
 conf.nchains = 4;
 conf.nburnin = 500;
 conf.nsamples = 2000; 
 conf.N = 501; % 1 - throwaway
-%conf.nburnin = 10;
-%conf.nsamples = 20;
+% conf.nburnin = 10;
+% conf.nsamples = 70;
+% conf.N = 1;
 conf.thin = 1;
 conf.doparallel = 1;
 conf.result_dir = result_dir;

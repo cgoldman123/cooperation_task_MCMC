@@ -4,7 +4,7 @@ model {
       
      for (s in 1:NS) {
         opt[s] ~ dnorm(.5,4) I(.0000001,.9999999)
-        omega[s] ~ dnorm(.5,4) I(.0000001,.9999999)
+        omega[s] ~ dnorm(.2,4) I(.0000001,.9999999)
         eta[s] ~ dnorm(.5,4) I(.0000001,.9999999)
         alpha[s] ~ dnorm(4,8) I(.0000001,)
         cr[s] ~ dnorm(1,8) I(.0000001,)

@@ -1,7 +1,8 @@
 function [sim_fits, sim_samples, sim_stats] = MCMC_simfit(subject_data, params,conf)
     dbstop if error;
     MDP = rmfield(params, 'deviance');
-    MDP.forgetting_split = 0;
+    MDP.forgetting_split_matrix = 0;
+    MDP.forgetting_split_row = 0;
     MDP.learning_split = 0;
     MDP.NB = conf.num_blocks;
     MDP.T = conf.num_trials_per_block;
@@ -73,7 +74,7 @@ function [sim_fits, sim_samples, sim_stats] = MCMC_simfit(subject_data, params,c
         S.cr(1:NS) = 1;
         S.cl(1:NS) = 1;
         S.alpha(1:NS) = 4;
-        S.omega(1:NS) = .5;
+        S.omega(1:NS) = .2;
 
         init0(i) = S;
     end
@@ -129,7 +130,8 @@ function [sim_fits, sim_samples, sim_stats] = MCMC_simfit(subject_data, params,c
                 sim_fits(si).([mean_or_mode{i} '_' (fn{1})]) = sim_stats.(mean_or_mode{i}).(fn{1});
             end
             params = sim_stats.(mean_or_mode{i}); 
-            params.forgetting_split = 0;
+            params.forgetting_split_matrix = 0;
+            params.forgetting_split_row = 0;
             params.learning_split = 0;
             params.NB = conf.num_blocks;
             params.T = conf.num_trials_per_block;

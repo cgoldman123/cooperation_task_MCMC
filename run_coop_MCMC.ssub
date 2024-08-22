@@ -1,8 +1,8 @@
 #!/bin/bash
 #
 #SBATCH --partition=c3
-#SBATCH --ntasks=1
-#SBATCH --mem=12000
+#SBATCH --ntasks=4
+#SBATCH --mem=40000
 #SBATCH --nodes=1
 #SBATCH --chdir=/media/labs/rsmith/lab-members/cgoldman/Wellbeing/cooperation_task/scripts/cooperation_task_scripts_MCMC_CMG/
 #SBATCH --begin=now

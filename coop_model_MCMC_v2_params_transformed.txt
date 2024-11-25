@@ -1,0 +1,67 @@
+#var a[NS,num.blocks,num.trials.per.block,3,3]
+
+model {
+      
+     for (s in 1:NS) {
+        opt[s] ~ dnorm(.5,4)
+        opt_t[s] <- 1/(1+exp(-opt[s])) # transformed
+        omega[s] ~ dnorm(.2,4)
+        omega_t[s] <- 1/(1+exp(-omega[s])) # transformed
+        eta[s] ~ dnorm(.5,4) 
+        eta_t[s] <- 1/(1+exp(-eta[s])) # transformed
+        alpha[s] ~ dnorm(4,4) 
+        alpha_t[s] <- exp(alpha[s]) # transformed
+        cr[s] ~ dnorm(1,4) 
+        cr_t[s] <- exp(cr[s]) # transformed
+        cl[s] ~ dnorm(1,4) 
+        cl_t[s] <- exp(cl[s]) # transformed
+        C[s,1] <- cr_t[s] + cl_t[s] + .0000001
+        C[s,2] <- cl_t[s] + .0000001
+        C[s,3] <- .0000001
+        softmaxed.C[s,1] = exp(C[s,1])/(exp(C[s,1]) + exp(C[s,2]) + exp(C[s,3]))
+        softmaxed.C[s,2] = exp(C[s,2])/(exp(C[s,1]) + exp(C[s,2]) + exp(C[s,3]))
+        softmaxed.C[s,3] = exp(C[s,3])/(exp(C[s,1]) + exp(C[s,2]) + exp(C[s,3]))
+
+        for (b in 1:num.blocks) {
+          for (pol in 1:3) {
+                for (k in 1:3) {
+                    a[s,b,1,k,pol] = ifelse(k==1, opt_t[s], .5*(1-opt_t[s]))
+                }
+          }
+
+          for (t in 2:num.trials.per.block) {
+             for (pol in 1:3) {
+                for (k in 1:3) {
+                    count.to.add[s,b,t,k,pol] <- ifelse((k == all.observations[s,b,t-1]) && (pol == all.actions[s,b,t-1]),eta_t[s],0)
+                    counts.remembered[s,b,t,k,pol] <- (a[s,b,t-1,k,pol] - a[s,b,1,k,pol])*(1-omega_t[s]) + a[s,b,1,k,pol]
+                    a[s,b,t,k,pol] <- counts.remembered[s,b,t,k,pol] + count.to.add[s,b,t,k,pol]
+                }
+             }
+           }
+
+           for (t in 4:num.trials.per.block) {
+              for (pol in 1:3) {
+                   for (k in 1:3) {
+                       A[s,b,t,k,pol] <- a[s,b,t,k,pol]/(a[s,b,t,1,pol] + a[s,b,t,2,pol] + a[s,b,t,3,pol])
+                       a.sums[s,b,t,k,pol] = (a[s,b,t,1,pol] + a[s,b,t,2,pol] + a[s,b,t,3,pol])
+                       info.gain[s,b,t,k,pol] = .5*((a[s,b,t,k,pol]^-1)-(a.sums[s,b,t,k,pol]^-1))
+                   }
+                   epistemic.value[s,b,t,pol] <- sum(A[s,b,t,,pol] * info.gain[s,b,t,,pol])
+                   pragmatic.value[s,b,t,pol] <- sum(A[s,b,t,,pol] * log(softmaxed.C[s,]))
+                   G[s,b,t,pol] <- -epistemic.value[s,b,t,pol] - pragmatic.value[s,b,t,pol]
+              }
+              for (pol in 1:3){
+                   q[s,b,t,pol] <- (exp(-G[s,b,t,pol])) / (exp(-G[s,b,t,1]) + exp(-G[s,b,t,2]) + exp(-G[s,b,t,3]))
+                   transformed.q[s,b,t,pol] <- alpha_t[s] * log(q[s,b,t,pol])
+              }
+              for (pol in 1:3) {
+                   action.probs[s,b,t,pol] <- ifelse((transformed.q[s,b,t,1] + transformed.q[s,b,t,2] + transformed.q[s,b,t,3]) == 0, 1/3, exp(transformed.q[s,b,t,pol]) / (exp(transformed.q[s,b,t,1]) + exp(transformed.q[s,b,t,2]) + exp(transformed.q[s,b,t,3])))
+              }
+              all.actions[s, b, t] ~ dcat(action.probs[s,b,t,])
+
+           }
+        }
+     }
+}
+    
+           

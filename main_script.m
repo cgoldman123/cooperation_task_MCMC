@@ -3,7 +3,7 @@ dbstop if error
 rng(23);
 clear all;
 SIMFIT = true;
-SIM_PARAMS_PASSED_IN = false;
+SIM_PARAMS_PASSED_IN = true;
 
 if ispc
     root = 'L:';
@@ -20,7 +20,7 @@ if ispc
     simfit_alpha = 3.1454473;
     simfit_eta = 0.4853053;
     simfit_omega = 0.46222943;
-    simfit_pa = 0.68625881;
+    simfit_opt = 0.68625881;
     simfit_cr = 6.9241437;
     simfit_cl = 4.4656905;
    
@@ -36,7 +36,7 @@ elseif isunix
         simfit_cl = str2double(getenv('CL'))
         simfit_eta = str2double(getenv('ETA'))
         simfit_omega = str2double(getenv('OMEGA'))
-        simfit_pa = str2double(getenv('P_A'))
+        simfit_opt = str2double(getenv('OPT'))
     end
       
     
@@ -60,8 +60,8 @@ conf.num_blocks = 30;
 
 conf.nchains = 4;
 conf.nburnin = 500;
-conf.nsamples = 1000; 
-conf.N = 1; % 1 - throwaway
+conf.nsamples = 2000; 
+conf.N = 501; % 1 - throwaway
 % conf.nburnin = 10;
 % conf.nsamples = 70;
 % conf.N = 1;
@@ -100,7 +100,7 @@ if NS == 1
             params.alpha = simfit_alpha;
             params.eta = simfit_eta;
             params.omega = simfit_omega;
-            params.pa = simfit_pa;
+            params.opt = simfit_opt;
             params.cr = simfit_cr;
             params.cl = simfit_cl;    
             params.deviance = 'null';
@@ -113,6 +113,7 @@ if NS == 1
             end
             fits = sim_fit; samples = sim_samples; stats = sim_stats;
             fits.id = {subject_id};
+
         else
             params = stats.mean;
             [sim_fit, sim_samples, sim_stats] = MCMC_simfit(subject_data, params,conf);

@@ -68,13 +68,13 @@ function [sim_fits, sim_samples, sim_stats] = MCMC_simfit(subject_data, params,c
     
     clear S init0
     for i=1:nchains
-
-        S.opt(1:NS) = .5;
-        S.eta(1:NS) = .5;
-        S.cr(1:NS) = 1;
-        S.cl(1:NS) = 1;
-        S.alpha(1:NS) = 4;
-        S.omega(1:NS) = .2;
+        % untransformed params
+        S.opt(1:NS) = 0;
+        S.eta(1:NS) = 0;
+        S.cr(1:NS) = 0;
+        S.cl(1:NS) = 0;
+        S.alpha(1:NS) = 1.3863;
+        S.omega(1:NS) = -1.3863;
 
         init0(i) = S;
     end
@@ -87,7 +87,7 @@ function [sim_fits, sim_samples, sim_stats] = MCMC_simfit(subject_data, params,c
     fprintf( 'Running JAGS\n' );
     [sim_samples, sim_stats ] = matjags_cmg( ...
         datastruct, ...
-        fullfile(currdir, 'coop_model_MCMC_v2.txt'), ...
+        fullfile(currdir, 'coop_model_MCMC_v2_params_transformed.txt'), ...
         init0, ...
         'doparallel' , doparallel, ...
         'nchains', nchains,...
@@ -104,20 +104,18 @@ function [sim_fits, sim_samples, sim_stats] = MCMC_simfit(subject_data, params,c
      % MEAN
     % throw out first N-1 samples
     N = conf.N;
-    for i=1:length(monitor_params)
-        sim_stats.mean.(monitor_params{i}) = squeeze(mean(mean(sim_samples.(monitor_params{i})(:,N:end,:,:),2),1));
+    for i = 1:length(monitor_params)
+        if ismember(monitor_params{i},{'alpha', 'beta', 'cs', 'p_a', 'cr', 'cl'})
+            sim_samples_retransformed.(monitor_params{i}) = exp(sim_samples.(monitor_params{i}));
+        elseif ismember(monitor_params{i},{'eta_win', 'eta_loss', 'eta_neutral', 'eta', 'omega', 'omega_win', 'omega_loss','omega_neutral', 'opt'})
+            sim_samples_retransformed.(monitor_params{i}) = 1./(1+exp(-sim_samples.(monitor_params{i})));
+        else
+            sim_samples_retransformed.(monitor_params{i}) = sim_samples.(monitor_params{i});
+        end
+        sim_stats.mean.(monitor_params{i}) = squeeze(mean(mean(sim_samples_retransformed.(monitor_params{i})(:,N:end,:,:),2),1));
     end
 
 
-    % MODE
-    % Loop through each parameter, compute the mode after rounding, and store in stats
-%     for i = 1:length(monitor_params)
-%         data_vector = round(sim_samples.(monitor_params{i})(:), 2);
-%         [unique_values, ~, idx] = unique(data_vector);
-%         frequency = accumarray(idx, 1);
-%         [~, max_idx] = max(frequency);
-%         sim_stats.mode.(monitor_params{i}) = unique_values(max_idx);
-%     end
 
 
 

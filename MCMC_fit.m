@@ -45,13 +45,13 @@ function [fits, samples, stats] = MCMC_fit(fit_list,merged_data, conf)
 
     clear S init0
     for i=1:nchains
-
-        S.opt(1:NS) = .5;
-        S.eta(1:NS) = .5;
-        S.cr(1:NS) = 1;
-        S.cl(1:NS) = 1;
-        S.alpha(1:NS) = 4;
-        S.omega(1:NS) = .2;
+        % transformed params
+        S.opt(1:NS) = 0;
+        S.eta(1:NS) = 0;
+        S.cr(1:NS) = 0;
+        S.cl(1:NS) = 0;
+        S.alpha(1:NS) = 1.3863;
+        S.omega(1:NS) = -1.3863;
 
         init0(i) = S;
     end
@@ -62,7 +62,7 @@ function [fits, samples, stats] = MCMC_fit(fit_list,merged_data, conf)
     fprintf( 'Running JAGS\n' );
     [samples, stats ] = matjags_cmg( ...
         datastruct, ...
-        fullfile(currdir, 'coop_model_MCMC_v2.txt'), ...
+        fullfile(currdir, 'coop_model_MCMC_v2_params_transformed.txt'), ...
         init0, ...
         'doparallel' , doparallel, ...
         'nchains', nchains,...
@@ -79,11 +79,22 @@ function [fits, samples, stats] = MCMC_fit(fit_list,merged_data, conf)
     % MEAN
     % throw out first N-1 samples
     N = conf.N;
-    for i=1:length(monitor_params)
-        stats.mean.(monitor_params{i}) = squeeze(mean(mean(samples.(monitor_params{i})(:,N:end,:,:),2),1));
-    end
 
+
+    for i = 1:length(monitor_params)
+        if ismember(monitor_params{i},{'alpha', 'beta', 'cs', 'p_a', 'cr', 'cl'})
+            samples_retransformed.(monitor_params{i}) = exp(samples.(monitor_params{i}));
+        elseif ismember(monitor_params{i},{'eta_win', 'eta_loss', 'eta_neutral', 'eta', 'omega', 'omega_win', 'omega_loss','omega_neutral', 'opt'})
+            samples_retransformed.(monitor_params{i}) = 1./(1+exp(-samples.(monitor_params{i})));
+        else
+            samples_retransformed.(monitor_params{i}) = samples.(monitor_params{i});
+        end
+        stats.mean.(monitor_params{i}) = squeeze(mean(mean(samples_retransformed.(monitor_params{i})(:,N:end,:,:),2),1));
+    end
     
+%     for i=1:length(monitor_params)
+%         stats.mean.(monitor_params{i}) = squeeze(mean(mean(samples.(monitor_params{i})(:,N:end,:,:),2),1));
+%     end
     
 
     % MODE
@@ -101,6 +112,7 @@ function [fits, samples, stats] = MCMC_fit(fit_list,merged_data, conf)
     for si = 1:NS 
         fits(si).id = {char(fit_list(si))};
         %mean_or_mode = {'mean','mode'};
+        % change back to mean if no longer transform params
         mean_or_mode = {'mean'};
 
         for i = 1:length(mean_or_mode)
